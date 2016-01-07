@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:aop="http://www.springframework.org/schema/aop"
+	xsi:schemaLocation="
+		http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+		http://www.springframework.org/schema/context
+		http://www.springframework.org/schema/context/spring-context-3.0.xsd
+		http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx-3.0.xsd
+        http://www.springframework.org/schema/aop
+		http://www.springframework.org/schema/aop/spring-aop-3.0.xsd"
+		default-autowire="byName">
+
+	<bean id="mongoService" class="com.plocc.dc.service.impl.MongoServiceImpl">
+		<property name="mongoDao" ref="mongoDao"></property>
+	</bean>
+	
+	<bean name="matchManger" class="com.plocc.dc.match.MatchManager">
+		<property name="defaultMatch" ref="mongoMatch"/>
+	</bean>
+	
+	<bean name="mongoMatch" class="com.plocc.dc.match.MongodbMatch">
+		<property name="mongoService" ref="mongoService"/>
+	</bean>
+	
+	
+	<bean name="nullMatch" class="com.plocc.dc.match.NullMatch"/>
+	
+	<!--<bean name="kafkaMatch" class="com.plocc.dc.match.KafkaMatch"/>
+	
+	<bean name="dinnerMatch" class="com.plocc.dc.match.DinnerMatch"/>-->
+	
+	<bean name="httpDataCollection" class="com.plocc.dc.collecte.HttpDataCollection"/>
+	<bean id="sysPropertiesFactory" class="org.springframework.beans.factory.config.PropertiesFactoryBean">
+	  <property name="locations">
+	  	 <list>
+			<value>classpath:config.properties</value>
+	  	</list>
+	  </property>
+	</bean>
+	
+	<bean id="matchPropertiesFactory" class="org.springframework.beans.factory.config.PropertiesFactoryBean">
+	  <property name="locations">
+	  	 <list>
+			<value>classpath:match.properties</value>
+	  	</list>
+	  </property>
+	</bean>
+	
+	<bean name="dataQueue" class="com.plocc.dc.queue.DataQueue">
+		<property name="maxSize" value="${json_queue_maxsize}"/>
+	</bean>
+	<bean name="rawDataQueue" class="com.plocc.dc.queue.RawDataQueue">
+		<property name="maxSize" value="${rawdata_queue_maxsize}"/>
+	</bean>
+	
+	<bean name="dataQueueConsumer" class="com.plocc.dc.consumer.DataQueueConsumer" scope="prototype">
+		<property name="targetQueue" ref="dataQueue"/>
+		<property name="threadWaitTime" value="${consumer_wait_time}"/>
+		
+	</bean>
+	
+	<bean name="formatConsumer" class="com.plocc.dc.consumer.FormatConsumer" scope="prototype">
+		<property name="jsonDataQueue" ref="dataQueue"/>
+		<property name="targetQueue" ref="rawDataQueue"/>
+		<property name="threadWaitTime" value="${consumer_wait_time}"/>
+	</bean>
+	
+	<bean name="dataFilter" class="com.plocc.dc.filter.ValidateDataFilter"/>
+	
+	<bean id="appender" class="com.plocc.dc.append.SysTimeAppender">
+		<property name="next">
+			<bean class="com.plocc.dc.append.UserAgentAppender">
+				 <property name="next">
+				   <bean class="com.plocc.dc.append.RawDataPropAppender">
+				   	<property name="defaultBusinessPattern" value="logs.stat"/>
+				   </bean>
+				 </property>
+			</bean>
+		</property>
+		</bean>
+
+	<bean id="systemComponentAssemble" class="com.plocc.dc.assemble.SystemComponentAssemble"/>
+	
+	<bean id="dataCollectionOpenAPI" class="com.plocc.dc.collecte.DataCollectionOpenAPIImpl"/>
+</beans>
